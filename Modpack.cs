@@ -9,6 +9,32 @@ namespace saehyeon_mc_env
 {
     internal class Modpack
     {
+        public static async Task Verify(string modpackPath)
+        {
+            Logger.Log("모드팩 파일 검사 중", output: false);
+
+            // 모드팩 파일 경로가 제대로 설정됐는지 확인
+            if (string.IsNullOrWhiteSpace(modpackPath))
+            {
+                Logger.Error(Constants.Messages.ERR_WRONG_MODPACK_PATH);
+                Program.Close();
+            }
+
+            // 모드팩 파일 존재하는지 확인
+            if (!await Fs.PathExists(modpackPath))
+            {
+                Logger.Error(Constants.Messages.ERR_MODPACK_NOT_EXIST);
+                Program.Close();
+            }
+
+            // 모드팩이 올바른 압축 파일인지 검증
+            if (!await Zipper.VerifyZip(modpackPath))
+            {
+                Logger.Error(Constants.Messages.ERR_WRONG_MODPACK);
+                Program.Close();
+            }
+        }
+
         public static async Task<bool> VerifyInstall(string name)
         {
             string src = Path.Combine(Constants.GetTmpDir(), "modpack", name);
@@ -46,8 +72,7 @@ namespace saehyeon_mc_env
             catch (Exception e)
             {
                 Logger.Error($"{Constants.Messages.ERR_MODPACK_APPLY_FAILED} \"{name}\"");
-                Logger.Error(e.Message+"\n"+e.StackTrace);
-                Program.Close();
+                Program.Error(e);
             }
         }
 
@@ -69,7 +94,7 @@ namespace saehyeon_mc_env
             await Fs.EnsureDir(Constants.GetBackupDir());
             await Fs.EnsureDir(backupDir);
 
-            await JSON.WriteFile(Path.Combine(backupDir, "data.json"), dataJson);
+            await JsonUtils.WriteFile(Path.Combine(backupDir, "data.json"), dataJson);
 
             string zipFile = Path.Combine(Constants.GetBackupDir(), backupDir + ".zip");
 
@@ -90,8 +115,7 @@ namespace saehyeon_mc_env
             catch (Exception e)
             {
                 Logger.Error(Constants.Messages.ERR_BAK_CREATE_FAILED);
-                Logger.Error(e.Message+"\n"+e.StackTrace);
-                Program.Close();
+                Program.Error(e);
             }
 
             // backup 폴더로 옮기기
@@ -102,8 +126,7 @@ namespace saehyeon_mc_env
             catch (Exception e)
             {
                 Logger.Error(Constants.Messages.ERR_BAK_MOVE_FAILED);
-                Logger.Error(e.Message + ": " + e.StackTrace);
-                Program.Close();
+                Program.Error(e);
             }
 
             Logger.Info(Constants.Messages.CREATE_BAK_MODPACK_COMPLETE);
@@ -121,8 +144,8 @@ namespace saehyeon_mc_env
             } 
             catch (Exception e)
             {
-                Logger.Error(e.Message+"\n"+e.StackTrace);
-                Program.Close();
+                Logger.Error(Constants.Messages.ERR_MODPACK_UNZIP_FAILED);
+                Program.Error(e);
             }
 
             // 모드팩 데이터 가져오기
@@ -135,12 +158,12 @@ namespace saehyeon_mc_env
                 Program.Close();
             }
 
-            var data = await JSON.ReadFile(dataJsonFile);
+            var data = await JsonUtils.ReadFile(dataJsonFile);
 
-            string name = data.name ?? Constants.Messages.MODPACK_NAME_EMPTY;
-            string type = data.type ?? "modpack";
-            string version = data.version;
-            string forgeName = data.forgeName;
+            string name = (string)(data["name"] ?? Constants.Messages.MODPACK_NAME_EMPTY);
+            string type = (string)(data["type"] ?? "modpack");
+            string version = (string)data["version"];
+            string forgeName = (string)data["forgeName"];
             string forgeJarFile = Path.Combine(modpackDir, "forge.jar");
 
             bool isBackup = type.Equals("backup");
@@ -149,7 +172,7 @@ namespace saehyeon_mc_env
             // 타입이 backup 이면 백업본을 복구하는 거임
             if (isBackup)
             {
-                Logger.Info($"{name}{Constants.Messages.BAK_START}");
+                Logger.Info($"{Constants.Messages.RESTORE_START} {name}");
 
                 // modpackDir에 있는 것들 바로 적용
                 await Modpack.ApplyToMinecraft(Constants.FileStrings.Mods);
@@ -183,8 +206,8 @@ namespace saehyeon_mc_env
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e.Message+"\n"+e.StackTrace);
-                    Program.Close();
+                    Logger.Error(Constants.Messages.ERR_VANILLA_INSTALL_FAILED);
+                    Program.Error(e);
                 }
             }
             else
@@ -200,8 +223,7 @@ namespace saehyeon_mc_env
             catch (Exception e)
             {
                 Logger.Error(Constants.Messages.ERR_BAK_EXCPETION);
-                Logger.Error(e.Message + "\n" + e.StackTrace);
-                Program.Close();
+                Program.Error(e);
             }
 
             // 포지 확인
@@ -233,8 +255,7 @@ namespace saehyeon_mc_env
                     catch (Exception e)
                     {
                         Logger.Error(Constants.Messages.ERR_FORGE_INSTALL_ERROR);
-                        Logger.Error(e.Message+"\n"+e.StackTrace);
-                        Program.Close();
+                        Program.Error(e);
                     }
 
                     // 포지가 제대로 설치되었는지 확인
@@ -295,8 +316,7 @@ namespace saehyeon_mc_env
             catch (Exception e)
             {
                 Logger.Error(Constants.Messages.ERR_MODIFY_LAUNCHER_PROFILE_FAILED);
-                Logger.Error(e.Message+"\n"+e.StackTrace);
-                Program.Close();
+                Program.Error(e);
             }
 
             // 정리

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading.Tasks;
 
 public static class Zipper
@@ -17,16 +18,41 @@ public static class Zipper
         ZipFile.CreateFromDirectory(src, dest, CompressionLevel.Optimal, includeBaseDirectory: false);
     }
 
-    public static void UnzipSync(string src, string dest)
+    public static void UnzipSync(string src, string dest, int strip = 0)
     {
         if (!File.Exists(src))
             throw new FileNotFoundException($"ZIP 파일을 찾을 수 없습니다: {src}");
 
-        // 대상 폴더가 없으면 생성
-        if (!Directory.Exists(dest))
-            Directory.CreateDirectory(dest);
+        Directory.CreateDirectory(dest);
 
-        ZipFile.ExtractToDirectory(src, dest);
+        using (var archive = ZipFile.OpenRead(src))
+        {
+            foreach (var entry in archive.Entries)
+            {
+                var parts = entry.FullName.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length <= strip)
+                    continue;
+
+                var trimmedPath = Path.Combine(parts.Skip(strip).ToArray());
+                var fullPath = Path.Combine(dest, trimmedPath);
+
+                if (entry.FullName.EndsWith("/"))
+                {
+                    Directory.CreateDirectory(fullPath);
+                }
+                else
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+
+                    using (var inStream = entry.Open())
+                    using (var outStream = File.Create(fullPath))
+                    {
+                        inStream.CopyTo(outStream);
+                    }
+                }
+            }
+        }
     }
 
     public static bool VerifyZipSync(string path)
@@ -62,9 +88,9 @@ public static class Zipper
         return Task.Run(() => ZipDirSync(src, dest));
     }
 
-    public static Task Unzip(string src, string dest)
+    public static Task Unzip(string src, string dest, int strip = 0)
     {
-        return Task.Run(() => UnzipSync(src, dest));
+        return Task.Run(() => UnzipSync(src, dest, strip));
     }
 
     public static Task<bool> VerifyZip(string path)

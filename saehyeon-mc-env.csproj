@@ -55,7 +55,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Config.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Downloader.cs" />
+    <Compile Include="JDK.cs" />
     <Compile Include="Utils\Fs.cs" />
     <Compile Include="Utils\JsonUtil.cs" />
     <Compile Include="Utils\Logger.cs" />

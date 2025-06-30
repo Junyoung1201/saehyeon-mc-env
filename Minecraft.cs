@@ -81,13 +81,23 @@ namespace saehyeon_mc_env
 
         public static async Task InstallVanilla(string version)
         {
-            Logger.Info($"{version} 버전의 바닐라 마인크래프트 클라이언트 설치 중");
-            // 버전 전체 목록 가져오기
+            Logger.Info($"{Constants.Messages.DOWNLOAD_VANILLA_VERSION} {version}");
+
             string manifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
-            string manifestJson;
-            using (var wc = new WebClient())
+            string manifestJson = "{}";
+
+            // 버전 전체 목록 가져오기
+            try
             {
-                manifestJson = await wc.DownloadStringTaskAsync(manifestUrl);
+                using (var wc = new WebClient())
+                {
+                    manifestJson = await wc.DownloadStringTaskAsync(manifestUrl);
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(Constants.Messages.ERR_DOWNLOAD_VANILLA_LIST_FAILED);
+                Program.Error(e);
             }
 
             // 버전 정보 가져오기
@@ -97,7 +107,7 @@ namespace saehyeon_mc_env
 
             if (versionEntry == null)
             {
-                Logger.Error($"\"{version}\"(이)라는 마인크래프트 버전을 찾을 수 없습니다.");
+                Logger.Error($"{Constants.Messages.ERR_WRONG_VANILLA_VERSION} {version}");
                 Program.Close();
             }
 
@@ -105,11 +115,21 @@ namespace saehyeon_mc_env
             string versionJsonUrl = versionEntry["url"].Value<string>();
 
             // 버전 json 다운로드
-            string versionJson;
-            using (var wc = new WebClient())
+            string versionJson = "{}";
+
+            try
             {
-                versionJson = await wc.DownloadStringTaskAsync(versionJsonUrl);
+                using (var wc = new WebClient())
+                {
+                    versionJson = await wc.DownloadStringTaskAsync(versionJsonUrl);
+                }
             }
+            catch (Exception e)
+            {
+                Logger.Error(Constants.Messages.ERR_DOWNLOAD_VANILLA_JSON_FAILED);
+                Program.Error(e);
+            }
+
             var versionData = JObject.Parse(versionJson);
 
             // 버전 폴더 생성
@@ -123,12 +143,18 @@ namespace saehyeon_mc_env
             // 클라이언트 jar 파일 다운로드
             string clientJarUrl = versionData["downloads"]["client"]["url"].Value<string>();
             string clientJarPath = Path.Combine(versionDir, version + ".jar");
-            using (var wc = new WebClient())
+
+            try
             {
-                await wc.DownloadFileTaskAsync(clientJarUrl, clientJarPath);
+                await Downloader.DownloadFile(clientJarUrl, clientJarPath);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(Constants.Messages.ERR_DOWNLOAD_VANILLA_JAR_FAILED+$" {version}");
+                Program.Error(e);
             }
 
-            Logger.Info($"{version} 버전의 바닐라 마인크래프트 클라이언트를 설치했습니다.");
+            Logger.Info($"{Constants.Messages.DOWNLOAD_VANILLA_COMPLETE}");
         }
     }
 }
