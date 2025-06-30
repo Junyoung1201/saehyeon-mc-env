@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // 어셈블리에 대한 일반 정보는 다음 특성 집합을 통해 
 // 제어됩니다. 어셈블리와 관련된 정보를 수정하려면
 // 이러한 특성 값을 변경하세요.
-[assembly: AssemblyTitle("saehyeon-mc-env")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("세현 마인크래프트 설치기")]
+[assembly: AssemblyDescription("세현의 마인크래프트 환경구성 프로그램")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("이준영")]
 [assembly: AssemblyProduct("saehyeon-mc-env")]
-[assembly: AssemblyCopyright("Copyright ©  2025")]
+[assembly: AssemblyCopyright("Copyright © 이준영 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

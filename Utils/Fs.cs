@@ -242,12 +242,19 @@ public static class Fs
 
     public static async Task WriteAllText(string path, string content, Encoding encoding = null)
     {
-        encoding = encoding ?? Encoding.UTF8;
-        using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
-        using (var writer = new StreamWriter(fs, encoding))
-        {
-            await writer.WriteAsync(content).ConfigureAwait(false);
-        }
+        encoding = encoding ?? new UTF8Encoding(encoderShouldEmitUTF8Identifier: true); // BOM 포함
+
+        if (content.IndexOf('\r') == -1)
+            content = content.Replace("\n", "\r\n");
+
+        var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+        var fs = new FileStream(path, FileMode.Open,
+                                      FileAccess.Write, FileShare.None);
+        fs.SetLength(0);
+        var writer = new StreamWriter(fs, utf8NoBom);
+        await writer.WriteAsync(content).ConfigureAwait(false);
+        await writer.FlushAsync().ConfigureAwait(false);
     }
 
     public static async Task<string> ReadAllText(string path, Encoding encoding = null)
@@ -256,7 +263,9 @@ public static class Fs
         using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
         using (var reader = new StreamReader(fs, encoding))
         {
-            return await reader.ReadToEndAsync().ConfigureAwait(false);
+            var rs = await reader.ReadToEndAsync().ConfigureAwait(false);
+            reader.Close();
+            return rs;
         }
     }
 
@@ -309,5 +318,29 @@ public static class Fs
         }
 
         return list;
+    }
+
+    public static void MoveSync(string src, string dest)
+    {
+        if (!PathExistsSync(src))
+            throw new FileNotFoundException($"이동할 경로를 찾을 수 없습니다: {src}", src);
+
+        var destDir = Path.GetDirectoryName(dest);
+        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+            Directory.CreateDirectory(destDir);
+
+        if (IsDirectorySync(src))
+        {
+            Directory.Move(src, dest);
+        }
+        else
+        {
+            File.Move(src, dest);
+        }
+    }
+
+    public static Task Move(string src, string dest)
+    {
+        return Task.Run(() => MoveSync(src, dest));
     }
 }

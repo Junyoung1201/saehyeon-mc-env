@@ -1,55 +1,62 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Xml;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-public static class JsonUtil
+public static class JSON
 {
-    public static string Stringify(object obj, bool indented = false)
+    public static Task<dynamic> Parse(string json)
     {
-        return JsonConvert.SerializeObject(
-            obj,
-            indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None
-        );
+        return Task.Run(() => JsonConvert.DeserializeObject<dynamic>(json));
     }
 
-    public static T Parse<T>(string json)
+    public static Task<string> Stringify(object obj)
     {
-        if (string.IsNullOrWhiteSpace(json))
-            throw new ArgumentException("JSON 문자열이 비어있습니다.", nameof(json));
-
-        return JsonConvert.DeserializeObject<T>(json);
+        return Task.Run(() => JsonConvert.SerializeObject(obj));
     }
 
-    public static dynamic Parse(string json)
+    public static void Values(JObject obj)
     {
-        if (string.IsNullOrWhiteSpace(json))
-            throw new ArgumentException("JSON 문자열이 비어있습니다.", nameof(json));
-
-        return JsonConvert.DeserializeObject<dynamic>(json);
+        foreach (KeyValuePair<string, JToken> kv in obj)
+        {
+            Console.WriteLine($"키: {kv.Key}, 값: {kv.Value}");
+        }
     }
 
-    public static JToken ParseJToken(string json)
+    public static void Set(JObject src, string value, dynamic newData)
     {
-        if (string.IsNullOrWhiteSpace(json))
-            throw new ArgumentException("JSON 문자열이 비어있습니다.", nameof(json));
-
-        return JToken.Parse(json);
+        src[value] = JToken.FromObject(newData);
     }
 
-    public static T ReadFromFile<T>(string path)
+    public static async Task<dynamic> ReadFile(string path)
     {
-        if (!File.Exists(path))
-            throw new FileNotFoundException("JSON 파일을 찾을 수 없습니다.", path);
-
-        string json = File.ReadAllText(path);
-        return Parse<T>(json);
+        using (var reader = new StreamReader(path))
+        {
+            var content = await reader.ReadToEndAsync().ConfigureAwait(false);
+            return await Parse(content).ConfigureAwait(false);
+        }
     }
 
-    public static void WriteToFile(object obj, string path, bool indented = false)
+    public static async Task WriteFile(string path, object obj)
     {
-        string json = Stringify(obj, indented);
-        File.WriteAllText(path, json);
+        var content = await Stringify(obj).ConfigureAwait(false);
+        using (var writer = new StreamWriter(path, false))
+        {
+            await writer.WriteAsync(content).ConfigureAwait(false);
+        }
+    }
+
+    public static dynamic ReadFileSync(string path)
+    {
+        var content = File.ReadAllText(path);
+        return JsonConvert.DeserializeObject<dynamic>(content);
+    }
+
+    public static void WriteFileSync(string path, object obj)
+    {
+        var content = JsonConvert.SerializeObject(obj);
+        File.WriteAllText(path, content);
     }
 }

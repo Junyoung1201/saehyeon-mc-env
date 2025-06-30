@@ -8,8 +8,20 @@ public static class Logger
     private static readonly object _lock = new object();
     private static bool _handlersRegistered = false;
     private static bool _prefix = true;
+    private static bool _outputPrefix = false;
+    private static bool _output = true;
 
-    public static void SetPrefixVisible(bool prefix)
+    public static void SetOutput(bool output)
+    {
+        _output = output;
+    }
+
+    public static void SetPrefixOutput(bool outputPrefix)
+    {
+        _outputPrefix = outputPrefix;
+    }
+
+    public static void SetWritePrefix(bool prefix)
     {
         Logger._prefix = prefix;
     }
@@ -22,6 +34,12 @@ public static class Logger
         if (Path.GetExtension(path).Equals(".log"))
         {
             _logFilePath = path;
+
+            // 이미 같은 이름의 파일이 있으면 제거
+            if(File.Exists(_logFilePath))
+            {
+                File.Delete(_logFilePath);
+            }
         }
         else
         {
@@ -53,14 +71,27 @@ public static class Logger
         }
     }
 
-    public static void Log(string message, string prefix = "INFO")
+    public static void Log(string message, string prefix = "INFO", bool output = true)
     {
         string timeTag = DateTime.Now.ToString("yyyy-MM-dd");
-        string prefixStr = Logger._prefix ? $"[{timeTag}] [{prefix}] " : "";
+        string prefixStr = _prefix ? $"[{timeTag}] [{prefix}] " : "";
         string logLine = $"{prefixStr}{message}";
 
         // 콘솔 출력
-        Console.WriteLine(logLine);
+        if(_output && output)
+        {
+            string outputLine;
+
+            if (_outputPrefix)
+            {
+                outputLine = prefix + message;
+            }
+            else
+            {
+                outputLine = message;
+            }
+            Console.WriteLine(outputLine);
+        }
 
         // 파일 출력
         if (_writer != null)
