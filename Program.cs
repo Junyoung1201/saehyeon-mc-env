@@ -72,18 +72,6 @@ namespace saehyeon_mc_env
             await Fs.EnsureDir(Constants.GetTmpDir());
             await Fs.EmptyDir(Constants.GetTmpDir());
 
-            // 모드팩 설치 전 백업
-            try
-            {
-                await Modpack.CreateBackupModpack();
-            }
-            catch (Exception e)
-            {
-                Logger.Error(Constants.Messages.ERR_BAK_EXCPETION);
-                Logger.Error(e.Message+"\n"+e.StackTrace);
-                Close();
-            }
-
             // 모드팩 설치 시작
             try
             {
