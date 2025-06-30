@@ -207,7 +207,7 @@ namespace saehyeon_mc_env
                     if (!await Fs.PathExists(launcherProfile))
                     {
                         Logger.Info(Constants.Messages.CREATE_LAUNCHER_PROFILE_DUMMY);
-                        File.WriteAllText(launcherProfile, "{}");
+                        await Fs.WriteAllText(launcherProfile, "{}");
                     }
 
                     // 포지 설치 시작
