@@ -192,6 +192,18 @@ namespace saehyeon_mc_env
                 Logger.Info(Constants.Messages.SKIP_VANILLA_INSTALL);
             }
 
+            // 모드팩 설치 전 백업
+            try
+            {
+                await Modpack.CreateBackupModpack();
+            }
+            catch (Exception e)
+            {
+                Logger.Error(Constants.Messages.ERR_BAK_EXCPETION);
+                Logger.Error(e.Message + "\n" + e.StackTrace);
+                Program.Close();
+            }
+
             // 포지 확인
             if (hasForge)
             {
