@@ -16,9 +16,15 @@ namespace saehyeon_mc_env
             Environment.Exit(0);
         }
 
+        public static void Error(Exception e)
+        {
+            Logger.Error(e.Message + "\n" + e.StackTrace);
+            Program.Close();
+        }
+
         async static Task Main(string[] args)
         {
-            Logger.StartWriteFile("installer.log");
+            Logger.StartWriteFile("saehyeon-mc-env.log");
             Logger.SetPrefixOutput(false);
             Logger.SetWritePrefix(true);
 
@@ -40,37 +46,20 @@ namespace saehyeon_mc_env
 
             Logger.Log($"modpackPath = \"{modpackPath}\"", output: false);
 
-            // 모드팩 파일 경로가 제대로 설정됐는지 확인
-            if (string.IsNullOrWhiteSpace(modpackPath))
-            {
-                Logger.Error(Constants.Messages.ERR_WRONG_MODPACK_PATH);
-                Close();
-            }
+            // 모드팩 파일 검사
+            await Modpack.Verify(modpackPath);
 
-            // 모드팩 파일 존재하는지 확인
-            if (!await Fs.PathExists(modpackPath))
-            {
-                Logger.Error(Constants.Messages.ERR_MODPACK_NOT_EXIST);
-                Close();
-            }
+            // 설정 파일 보장
+            Config.Ensure();
 
-            // 모드팩이 올바른 압축 파일인지 검증
-            if(!await Zipper.VerifyZip(modpackPath))
-            {
-                Logger.Error(Constants.Messages.ERR_WRONG_MODPACK);
-                Close();
-            }
+            // 설정 파일 불러오기
+            Config.Load();
 
-            // jdk 확인
-            if(!await Fs.PathExists(Constants.GetJdkPath()))
-            {
-                Logger.Error(Constants.Messages.ERR_JDK_NOT_EXIST);
-                Close();
-            }
+            // jdk 보장
+            await JDK.InitJdkPath();
 
-            // 임시 폴더 보장 및 초기화
-            await Fs.EnsureDir(Constants.GetTmpDir());
-            await Fs.EmptyDir(Constants.GetTmpDir());
+            // bin 폴더 보장
+            await Fs.EnsureDir(Constants.GetBinDir());
 
             // 모드팩 설치 시작
             try
@@ -80,8 +69,7 @@ namespace saehyeon_mc_env
             catch (Exception e)
             {
                 Logger.Error(Constants.Messages.ERR_MODPACK_EXCPETION);
-                Logger.Error(e.Message + "\n" + e.StackTrace);
-                Close();
+                Error(e);
             }
         }
     }
