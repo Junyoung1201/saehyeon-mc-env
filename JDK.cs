@@ -40,6 +40,13 @@ namespace saehyeon_mc_env
 
         public static async Task InitJdkPath()
         {
+            // 설정에서 불러온 JDK가 존재하는지 확인
+            if(await Fs.PathExists(JDK.JdkPath))
+            {
+                // jdk 있으면 아무것도 안하기
+                return;
+            }
+
             // 프로그램의 bin 폴더 안에 jdk 있으면 해당 jdk를 사용
             string jdkPath = Path.Combine(Constants.GetBinDir(), "jdk", "bin", "java.exe");
 
@@ -53,20 +60,23 @@ namespace saehyeon_mc_env
                 jdkPath = Path.Combine("C:\\", "Program Files", "Java");
                 bool hasJdk = false;
 
-                foreach(var dir in Directory.EnumerateDirectories(jdkPath))
+                if(await Fs.PathExists(jdkPath))
                 {
-                    string dirName = Path.GetFileName(dir);
-                    jdkPath = Path.Combine(jdkPath, dir, "bin", "java.exe");
-
-                    Logger.Log($"JDK 확인 중: {dirName} ({jdkPath})", output: false);
-
-                    if (dirName.StartsWith("j"))
+                    foreach (var dir in Directory.EnumerateDirectories(jdkPath))
                     {
+                        string dirName = Path.GetFileName(dir);
+                        jdkPath = Path.Combine(jdkPath, dir, "bin", "java.exe");
 
-                        if(await Fs.PathExists(jdkPath))
+                        Logger.Log($"JDK 확인 중: {dirName} ({jdkPath})", output: false);
+
+                        if (dirName.StartsWith("j"))
                         {
-                            hasJdk = true;
-                            break;
+
+                            if (await Fs.PathExists(jdkPath))
+                            {
+                                hasJdk = true;
+                                break;
+                            }
                         }
                     }
                 }

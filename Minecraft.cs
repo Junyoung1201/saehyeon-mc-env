@@ -81,6 +81,10 @@ namespace saehyeon_mc_env
 
         public static async Task InstallVanilla(string version)
         {
+            // versions 폴더 보장
+            string versionsDir = Path.Combine(Constants.GetMinecraftDir(), "versions");
+            await Fs.EnsureDir(versionsDir);
+
             Logger.Info($"{Constants.Messages.DOWNLOAD_VANILLA_VERSION} {version}");
 
             string manifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
@@ -132,8 +136,8 @@ namespace saehyeon_mc_env
 
             var versionData = JObject.Parse(versionJson);
 
-            // 버전 폴더 생성
-            string versionDir = Path.Combine(Constants.GetMinecraftDir(), "versions", version);
+            // 버전 폴더 보장
+            string versionDir = Path.Combine(versionsDir, version);
             await Fs.EnsureDir(versionDir);
 
             // 버전 json 저장

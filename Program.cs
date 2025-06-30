@@ -24,6 +24,8 @@ namespace saehyeon_mc_env
 
         async static Task Main(string[] args)
         {
+            Console.Title = "세현 마인크래프트 환경구성 프로그램";
+
             Logger.StartWriteFile("saehyeon-mc-env.log");
             Logger.SetPrefixOutput(false);
             Logger.SetWritePrefix(true);
