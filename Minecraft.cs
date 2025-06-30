@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Linq;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace saehyeon_mc_env
 {
@@ -18,47 +19,59 @@ namespace saehyeon_mc_env
         public static async Task AddLauncherProfile(
             string profileName,
             string lastVersionId,
-            string gameDirectory = null,
-            string javaArgs = null,
             bool autoSelect = true
         ) {
             string filePath = Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.LauncherProfile);
 
-            string json = await Fs.ReadAllText(filePath);
-            var root = JObject.Parse(json);
+            var jsonText = "{}";
 
-            // profiles 객체 가져오고 없으면 생성
+            if (await Fs.PathExists(filePath))
+            {
+                jsonText = await Fs.ReadAllText(filePath);
+            }
+
+            var root = JObject.Parse(jsonText);
+
+            // profiles 속성 없으면 새로 생성
             if (!(root["profiles"] is JObject profiles))
             {
                 profiles = new JObject();
                 root["profiles"] = profiles;
             }
 
-            // json에 새 프로필 추가
-            string newProfileId = Guid.NewGuid().ToString();
-            string defaultGameDir = gameDirectory
-                ?? Path.Combine(Constants.GetMinecraftDir(), profileName);
+
+            // 새 프로필
+            string uuid = Guid.NewGuid().ToString().Replace("-","");
+
+            // 같은 이름을 가진 프로필 삭제
+            var toRemove = new List<string>();
+
+            foreach (var p in profiles.Properties())
+            {
+                var obj = p.Value as JObject;
+                if (obj != null && obj["name"]?.ToString() == profileName)
+                {
+                    toRemove.Add(p.Name);
+                }
+            }
+            foreach (var key in toRemove)
+            {
+                profiles.Property(key).Remove();
+            }
 
             var newProfile = new JObject
             {
-                ["id"] = newProfileId,
-                ["name"] = profileName,
+                //["icon"] = "Dirt",
+                ["lastUsed"] = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"),
                 ["lastVersionId"] = lastVersionId,
-                ["gameDir"] = defaultGameDir,
-                ["javaArgs"] = javaArgs ?? string.Empty,
+                ["name"] = profileName,
+                ["type"] = "custom"
             };
 
-            profiles[newProfileId] = newProfile;
+            profiles[uuid] = newProfile;
 
-            // 프로필 자동 선택
-            if(autoSelect)
-            {
-                root["selectedProfile"] = newProfileId;
-            }
-
-            // 파일 쓰기
-            string output = root.ToString(Formatting.Indented);
-            await Fs.WriteAllText(filePath, output);
+            var updatedJson = JsonConvert.SerializeObject(root, Formatting.Indented);
+            await Fs.WriteAllText(filePath, updatedJson);
         }
 
         public static async Task InstallVanilla(string version)

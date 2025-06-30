@@ -32,9 +32,13 @@ namespace saehyeon_mc_env
             public static string ERR_WRONG_MODPACK = "손상되었거나 올바르지 않은 모드팩입니다.";
             public static string ERR_MODPACK_NOT_EXIST = "모드팩 경로를 찾을 수 없습니다.";
             public static string ERR_WRONG_MODPACK_PATH = "모드팩 경로가 올바르지 않습니다.";
-            public static string ERR_MODPACK_NOT_INPUT = "모드팩이 프로그램 위에 끌어다 놓아져야 합니다.";
+            public static string ERR_MODPACK_NOT_INPUT = "모드팩을 프로그램 위에 놓아야 합니다. 모드팩이 입력되지 않았습니다.";
+            public static string SKIP_MODPACK_APPLY = "모드팩 구성요소 적용을 스킵합니다:";
             public static string UNZIP = "압축해제:";
             public static string COPY = "복사 중:";
+            public static string ERR_BAK_EXCPETION = "마인크래프트 백업 중 처리되지 않은 예외가 발생했습니다.";
+            public static string ERR_BAK_MOVE_FAILED = "백업 용 모드팩을 옮기는데 실패했습니다.";
+            public static string ERR_MODPACK_EXCPETION = "모드팩 적용 중 처리되지 않은 예외가 발생했습니다.";
             public static string CHECKING_MODPACK_DATA = "모드팩 정보 확인 중";
             public static string INSTALLING_FORGE = "포지 설치 중";
             public static string VERIFYING_INSTALLATION = "무결성 검증 중";

@@ -9,6 +9,9 @@ namespace saehyeon_mc_env
         public static void Close()
         {
             Logger.Close();
+
+            // tmp 폴더 삭제
+            Fs.RemoveSync(Constants.GetTmpDir());
             Console.ReadKey();
             Environment.Exit(0);
         }
@@ -16,9 +19,10 @@ namespace saehyeon_mc_env
         async static Task Main(string[] args)
         {
             Logger.StartWriteFile("installer.log");
-            Logger.SetPrefixVisible(false);
+            Logger.SetPrefixOutput(false);
+            Logger.SetWritePrefix(true);
 
-            Logger.Log("행복한 다람쥐가 되고 싶다.");
+            Logger.Log("행복한 다람쥐가 되고 싶다.", output: false);
 
             if (args.Length == 0)
             {
@@ -34,8 +38,10 @@ namespace saehyeon_mc_env
                 modpackPath = Path.GetFullPath(path);
             }
 
+            Logger.Log($"modpackPath = \"{modpackPath}\"", output: false);
+
             // 모드팩 파일 경로가 제대로 설정됐는지 확인
-            if(string.IsNullOrWhiteSpace(modpackPath))
+            if (string.IsNullOrWhiteSpace(modpackPath))
             {
                 Logger.Error(Constants.Messages.ERR_WRONG_MODPACK_PATH);
                 Close();
@@ -67,10 +73,28 @@ namespace saehyeon_mc_env
             await Fs.EmptyDir(Constants.GetTmpDir());
 
             // 모드팩 설치 전 백업
-            await Modpack.CreateBackupModpack();
+            try
+            {
+                await Modpack.CreateBackupModpack();
+            }
+            catch (Exception e)
+            {
+                Logger.Error(Constants.Messages.ERR_BAK_EXCPETION);
+                Logger.Error(e.Message+"\n"+e.StackTrace);
+                Close();
+            }
 
             // 모드팩 설치 시작
-            await Modpack.Install(modpackPath);
+            try
+            {
+                await Modpack.Install(modpackPath);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(Constants.Messages.ERR_MODPACK_EXCPETION);
+                Logger.Error(e.Message + "\n" + e.StackTrace);
+                Close();
+            }
         }
     }
 }

@@ -14,13 +14,19 @@ namespace saehyeon_mc_env
             string src = Path.Combine(Constants.GetTmpDir(), "modpack", name);
             string dest = Path.Combine(Constants.GetMinecraftDir(), name);
 
-            return await Fs.Verify(src,dest);
+            return !await Fs.PathExists(src) || await Fs.Verify(src,dest);
         }
 
         public static async Task ApplyToMinecraft(string name)
         {
             string src = Path.Combine(Constants.GetTmpDir(), "modpack", name);
             string dest = Path.Combine(Constants.GetMinecraftDir(), name);
+
+            if(!await Fs.PathExists(src))
+            {
+                Logger.Info($"{Constants.Messages.SKIP_MODPACK_APPLY} {name}");
+                return;
+            }
 
             try
             {
@@ -40,49 +46,67 @@ namespace saehyeon_mc_env
             catch (Exception e)
             {
                 Logger.Error($"{Constants.Messages.ERR_MODPACK_APPLY_FAILED} \"{name}\"");
-                Logger.Error(e.Message);
+                Logger.Error(e.Message+"\n"+e.StackTrace);
                 Program.Close();
             }
         }
 
         public static async Task CreateBackupModpack()
         {
-            DateTime now = DateTime.Now;
-            string y = now.Year.ToString().PadLeft(4, '0');
-            string m = now.Month.ToString().PadLeft(2, '0');
-            string d = now.Date.ToString().PadLeft(2, '0');
+            string dateStr = DateTime.Now.ToString("yyyy년 MM월 dd일 HH시 mm분 ss초");
 
-            string hh = now.Hour.ToString().PadLeft(2, '0');
-            string mm = now.Minute.ToString().PadLeft(2, '0');
-            string ss = now.Second.ToString().PadLeft(2, '0');
-
-            string backupDir = Path.Combine(Constants.GetTmpDir(), y + m + d + " " + hh + mm + ss);
+            string backupDir = Path.Combine(Constants.GetTmpDir(), dateStr+" 백업");
 
             // 백업 모드팩의 data.json 작성
             var dataJson = new
             {
-                name = $"{y}-{m}-{d} {hh}:{mm}:{ss} 백업",
+                name = dateStr + " 백업",
                 type = "backup"
             };
 
-            JsonUtil.WriteToFile(dataJson, Path.Combine(backupDir, "data.json"));
-
-            // 압축
+            Logger.Info(backupDir);
+            await Fs.EnsureDir(Constants.GetTmpDir());
             await Fs.EnsureDir(Constants.GetBackupDir());
+            await Fs.EnsureDir(backupDir);
 
-            string zipFile = Path.Combine(Constants.GetBackupDir(), backupDir+".zip");
-            Logger.Info($"{Constants.Messages.CREATEING_BAK_MODPACK}(\"{zipFile}\")");
+            await JSON.WriteFile(Path.Combine(backupDir, "data.json"), dataJson);
+
+            string zipFile = Path.Combine(Constants.GetBackupDir(), backupDir + ".zip");
+
             try
             {
+                // 마인크래프트에 있는 폴더 및 파일 복사
+                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Mods), Path.Combine(backupDir, Constants.FileStrings.Mods));
+                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Resourcepacks), Path.Combine(backupDir, Constants.FileStrings.Resourcepacks));
+                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Config), Path.Combine(backupDir, Constants.FileStrings.Config));
+                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Shaderpacks), Path.Combine(backupDir, Constants.FileStrings.Shaderpacks));
+                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.OptionsTxt), Path.Combine(backupDir, Constants.FileStrings.OptionsTxt));
+
+                // 압축
+                Logger.Info($"{Constants.Messages.CREATEING_BAK_MODPACK}(\"{zipFile}\")");
+
                 await Zipper.ZipDir(backupDir, zipFile);
             }
             catch (Exception e)
             {
                 Logger.Error(Constants.Messages.ERR_BAK_CREATE_FAILED);
-                Logger.Error(e.Message);
+                Logger.Error(e.Message+"\n"+e.StackTrace);
                 Program.Close();
             }
-            Logger.Info($"{Constants.Messages.CREATE_BAK_MODPACK_COMPLETE} (위치: \"{zipFile}\")");
+
+            // backup 폴더로 옮기기
+            try
+            {
+                await Fs.Move(zipFile, Path.Combine(Constants.GetBackupDir(), Path.GetFileName(zipFile)));
+            }
+            catch (Exception e)
+            {
+                Logger.Error(Constants.Messages.ERR_BAK_MOVE_FAILED);
+                Logger.Error(e.Message + ": " + e.StackTrace);
+                Program.Close();
+            }
+
+            Logger.Info(Constants.Messages.CREATE_BAK_MODPACK_COMPLETE);
         }
 
         public static async Task Install(string path)
@@ -97,7 +121,7 @@ namespace saehyeon_mc_env
             } 
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e.Message+"\n"+e.StackTrace);
                 Program.Close();
             }
 
@@ -111,19 +135,16 @@ namespace saehyeon_mc_env
                 Program.Close();
             }
 
-            var data = JsonUtil.ReadFromFile<dynamic>(path);
+            var data = await JSON.ReadFile(dataJsonFile);
 
-            string name = data.name;
-            string type = data.type;
+            string name = data.name ?? Constants.Messages.MODPACK_NAME_EMPTY;
+            string type = data.type ?? "modpack";
             string version = data.version;
             string forgeName = data.forgeName;
-            string mpRpDir = Path.Combine(modpackDir, "resourcepacks");
-            string mpModsDir = Path.Combine(modpackDir, "mods");
-            string mpConfigDir = Path.Combine(modpackDir, "config");
-            string mpSpDir = Path.Combine(modpackDir, "shaderpacks");
-            string mpOptionsFile = Path.Combine(modpackDir, "options.txt");
-            string mpForgeFile = Path.Combine(modpackDir, "forge.jar");
+            string forgeJarFile = Path.Combine(modpackDir, "forge.jar");
+
             bool isBackup = type.Equals("backup");
+            bool hasForge = !string.IsNullOrEmpty(forgeName) && await Fs.PathExists(forgeJarFile);
 
             // 타입이 backup 이면 백업본을 복구하는 거임
             if (isBackup)
@@ -131,11 +152,11 @@ namespace saehyeon_mc_env
                 Logger.Info($"{name}{Constants.Messages.BAK_START}");
 
                 // modpackDir에 있는 것들 바로 적용
-                await Modpack.ApplyToMinecraft("mods");
-                await Modpack.ApplyToMinecraft("resourcepacks");
-                await Modpack.ApplyToMinecraft("config");
-                await Modpack.ApplyToMinecraft("shaderpacks");
-                await Modpack.ApplyToMinecraft("options.txt");
+                await Modpack.ApplyToMinecraft(Constants.FileStrings.Mods);
+                await Modpack.ApplyToMinecraft(Constants.FileStrings.Resourcepacks);
+                await Modpack.ApplyToMinecraft(Constants.FileStrings.Config);
+                await Modpack.ApplyToMinecraft(Constants.FileStrings.Shaderpacks);
+                await Modpack.ApplyToMinecraft(Constants.FileStrings.OptionsTxt);
 
                 Logger.Info($"{name}{Constants.Messages.BAK_COMPLETE}");
                 Program.Close();
@@ -162,7 +183,7 @@ namespace saehyeon_mc_env
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e.Message);
+                    Logger.Error(e.Message+"\n"+e.StackTrace);
                     Program.Close();
                 }
             }
@@ -172,17 +193,8 @@ namespace saehyeon_mc_env
             }
 
             // 포지 확인
-            string forgeJarFile = Path.Combine(modpackDir, "forge.jar");
-
-            if (await Fs.PathExists(forgeJarFile))
+            if (hasForge)
             {
-                // 포지 설치 파일은 있는데 data.json에 forgeName 값이 없음
-                if (string.IsNullOrWhiteSpace(forgeName))
-                {
-                    Logger.Error(Constants.Messages.ERR_FORGE_NAME_NOT_EXIST);
-                    Program.Close();
-                }
-
                 string forgeVersionFile = Path.Combine(Constants.GetMinecraftDir(), "versions", forgeName, forgeName + ".json");
 
                 if(!await Fs.PathExists(forgeVersionFile))
@@ -190,7 +202,7 @@ namespace saehyeon_mc_env
                     Logger.Info(Constants.Messages.INSTALLING_FORGE);
 
                     // 런처 프로필 없으면 더미 파일 생성
-                    string launcherProfile = Path.Combine(Constants.GetMinecraftDir(), "launcher_profiles.json");
+                    string launcherProfile = Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.LauncherProfile);
 
                     if (!await Fs.PathExists(launcherProfile))
                     {
@@ -209,7 +221,7 @@ namespace saehyeon_mc_env
                     catch (Exception e)
                     {
                         Logger.Error(Constants.Messages.ERR_FORGE_INSTALL_ERROR);
-                        Logger.Error(e.Message);
+                        Logger.Error(e.Message+"\n"+e.StackTrace);
                         Program.Close();
                     }
 
@@ -266,12 +278,12 @@ namespace saehyeon_mc_env
             Logger.Info(Constants.Messages.MODIFY_LAUNCHER_PROFILE);
             try
             {
-                await Minecraft.AddLauncherProfile(name ?? Constants.Messages.MODPACK_NAME_EMPTY, version, autoSelect: true);
+                await Minecraft.AddLauncherProfile(name, hasForge ? forgeName : version, autoSelect: true);
             }
             catch (Exception e)
             {
                 Logger.Error(Constants.Messages.ERR_MODIFY_LAUNCHER_PROFILE_FAILED);
-                Logger.Error(e.Message);
+                Logger.Error(e.Message+"\n"+e.StackTrace);
                 Program.Close();
             }
 
