@@ -70,6 +70,11 @@ namespace saehyeon_mc_env
 
             profiles[uuid] = newProfile;
 
+            if(autoSelect)
+            {
+                root["selectedProfile"] = uuid;
+            }
+
             var updatedJson = JsonConvert.SerializeObject(root, Formatting.Indented);
             await Fs.WriteAllText(filePath, updatedJson);
         }
