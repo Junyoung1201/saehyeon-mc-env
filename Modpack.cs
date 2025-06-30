@@ -66,13 +66,30 @@ namespace saehyeon_mc_env
                     await Fs.Remove(dest);
                 }
 
-                Logger.Info($"{Constants.Messages.COPY}: \"{src}\" -> \"{dest}\"");
+                Logger.Info($"{Constants.Messages.COPY} \"{src}\" -> \"{dest}\"");
                 await Fs.Copy(src, dest);
             }
             catch (Exception e)
             {
                 Logger.Error($"{Constants.Messages.ERR_MODPACK_APPLY_FAILED} \"{name}\"");
                 Program.Error(e);
+            }
+        }
+
+        private static async Task BackupDir(string name, string backupDir)
+        {
+            string src = Path.Combine(Constants.GetMinecraftDir(), name);
+            string dest = Path.Combine(backupDir, name);
+
+            if(await Fs.PathExists(src))
+            {
+                Logger.Info($"{Constants.Messages.COPY_TO_BACKUP_DIR} {name}");
+                await Fs.Copy(src, dest);
+            }
+            else
+            {
+                Logger.Info($"{Constants.Messages.CREATE_EMPTY_DIR_TO_BACKUP_DIR} {name}");
+                await Fs.EnsureDir(dest);
             }
         }
 
@@ -100,12 +117,11 @@ namespace saehyeon_mc_env
 
             try
             {
-                // 마인크래프트에 있는 폴더 및 파일 복사
-                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Mods), Path.Combine(backupDir, Constants.FileStrings.Mods));
-                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Resourcepacks), Path.Combine(backupDir, Constants.FileStrings.Resourcepacks));
-                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Config), Path.Combine(backupDir, Constants.FileStrings.Config));
-                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.Shaderpacks), Path.Combine(backupDir, Constants.FileStrings.Shaderpacks));
-                await Fs.Copy(Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.OptionsTxt), Path.Combine(backupDir, Constants.FileStrings.OptionsTxt));
+                // 모드 백업
+                await Modpack.BackupDir(Constants.FileStrings.Mods, backupDir);
+                await Modpack.BackupDir(Constants.FileStrings.Config, backupDir);
+                await Modpack.BackupDir(Constants.FileStrings.Shaderpacks, backupDir);
+                await Modpack.BackupDir(Constants.FileStrings.OptionsTxt, backupDir);
 
                 // 압축
                 Logger.Info($"{Constants.Messages.CREATEING_BAK_MODPACK}(\"{zipFile}\")");
@@ -233,7 +249,6 @@ namespace saehyeon_mc_env
 
                 if(!await Fs.PathExists(forgeVersionFile))
                 {
-                    Logger.Info(Constants.Messages.INSTALLING_FORGE);
 
                     // 런처 프로필 없으면 더미 파일 생성
                     string launcherProfile = Path.Combine(Constants.GetMinecraftDir(), Constants.FileStrings.LauncherProfile);
@@ -245,6 +260,8 @@ namespace saehyeon_mc_env
                     }
 
                     // 포지 설치 시작
+                    Logger.Info(Constants.Messages.INSTALLING_FORGE);
+
                     try
                     {
                         await ShellUtil.RunAsync(

@@ -66,6 +66,8 @@ namespace saehyeon_mc_env
             public static string ERR_SAVE_CONFIG_FAILED = "설정 파일 작성 중 오류가 발생했습니다.";
             public static string ERR_DOWNLOAD_VANILLA_LIST_FAILED = "바닐라 마인크래프트 버전 정보를 가져오는 중 오류가 발생했습니다.";
             public static string ERR_DOWNLOAD_VANILLA_JSON_FAILED = "바닐라 마인크래프트 버전 데이터 다운로드에 실패했습니다.";
+            public static string COPY_TO_BACKUP_DIR = "백업 폴더로 복사 중:";
+            public static string CREATE_EMPTY_DIR_TO_BACKUP_DIR = "백업 폴더에 빈 폴더 생성 중:";
         }
 
         public class FileStrings

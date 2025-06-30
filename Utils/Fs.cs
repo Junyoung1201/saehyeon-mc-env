@@ -242,19 +242,45 @@ public static class Fs
 
     public static async Task WriteAllText(string path, string content, Encoding encoding = null)
     {
-        encoding = encoding ?? new UTF8Encoding(encoderShouldEmitUTF8Identifier: true); // BOM 포함
+        encoding = encoding ?? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
-        if (content.IndexOf('\r') == -1)
-            content = content.Replace("\n", "\r\n");
+        if (!await Fs.PathExists(path))
+        {
+            // 파일 없으면 새로 작성
+            if (content.IndexOf('\r') == -1)
+            {
+                // CRLF 변환
+                content = content.Replace("\n", "\r\n");
+            }
 
-        var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            var directory = Path.GetDirectoryName(path);
 
-        var fs = new FileStream(path, FileMode.Open,
-                                      FileAccess.Write, FileShare.None);
-        fs.SetLength(0);
-        var writer = new StreamWriter(fs, utf8NoBom);
-        await writer.WriteAsync(content).ConfigureAwait(false);
-        await writer.FlushAsync().ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                await Fs.EnsureDir(directory);
+            }
+
+            // 파일 쓰기
+            using (var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(fs, encoding))
+            {
+                await writer.WriteAsync(content).ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
+            }
+        } 
+        else
+        {
+            // 파일이 있으면 해당 파일을 열어서 직접 수정
+            if (content.IndexOf('\r') == -1)
+                content = content.Replace("\n", "\r\n");
+
+            var fs = new FileStream(path, FileMode.Open,
+                                          FileAccess.Write, FileShare.None);
+            fs.SetLength(0);
+            var writer = new StreamWriter(fs, encoding);
+            await writer.WriteAsync(content).ConfigureAwait(false);
+            await writer.FlushAsync().ConfigureAwait(false);
+        }
     }
 
     public static async Task<string> ReadAllText(string path, Encoding encoding = null)

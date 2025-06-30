@@ -13,6 +13,7 @@ namespace saehyeon_mc_env
         public static string AppVersion = "1.0.2";
         public static string JdkUrl = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.7%2B6/OpenJDK21U-jdk_x64_windows_hotspot_21.0.7_6.zip";
         public static string RepoUrl = "https://https://github.com/Junyoung1201/saehyeon-mc-env";
+        public static bool BackupBeforeInstall = true;
 
         public static string GetConfigFile()
         {
@@ -31,7 +32,8 @@ namespace saehyeon_mc_env
                     appVersion = AppVersion,
                     jdkUrl = JdkUrl,
                     repo = RepoUrl,
-                    jdkPath = JDK.GetJdkPath()
+                    jdkPath = JDK.GetJdkPath(),
+                    backupBeforeInstall = BackupBeforeInstall
                 });
             }
             catch (Exception e)
@@ -58,10 +60,11 @@ namespace saehyeon_mc_env
                 Logger.Log(Constants.Messages.CONFIG_LOAD);
                 var configJson = JsonUtils.ReadFileSync(configFile);
 
-                Config.AppName = (string)configJson["appName"];
-                Config.AppVersion = (string)configJson["appVersion"];
-                Config.JdkUrl = (string)configJson["jdkUrl"];
-                Config.RepoUrl = (string)configJson["repo"];
+                Config.AppName = (string)(configJson["appName"] ?? AppName);
+                Config.AppVersion = (string)(configJson["appVersion"] ?? AppVersion);
+                Config.JdkUrl = (string)(configJson["jdkUrl"] ?? JdkUrl);
+                Config.RepoUrl = (string)(configJson["repo"] ?? RepoUrl);
+                Config.BackupBeforeInstall = (bool)(configJson["backupBeforeInstall"] ?? BackupBeforeInstall);
                 // jdk path
                 JDK.SetJdkPath((string)configJson["jdkPath"]);
 
