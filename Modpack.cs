@@ -213,6 +213,8 @@ namespace saehyeon_mc_env
                 Program.Close();
             }
 
+            Logger.Log($"\n\n\t{name} ({version}) 설치 시작\n\n");
+
             // 바닐라 버전이 존재하는지 확인
             if (!await Minecraft.CheckVanilla(version))
             {
@@ -265,7 +267,7 @@ namespace saehyeon_mc_env
                     try
                     {
                         await ShellUtil.RunAsync(
-                            $"\"{Constants.GetJdkPath()}\"",
+                            $"\"{JDK.GetJdkPath()}\"",
                             $"-jar \"{forgeJarFile}\" --install-client"
                         );
                     }
