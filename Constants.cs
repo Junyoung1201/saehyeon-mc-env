@@ -80,11 +80,6 @@ namespace saehyeon_mc_env
             public static string LauncherProfile = "launcher_profiles.json";
         }
 
-        public static string GetJdkPath()
-        {
-            return Path.Combine(Constants.GetBinDir(), "jdk", "bin", "java.exe");
-        }
-
         public static string GetTmpDir()
         {
             return Path.Combine(Constants.GetAppPath(), "tmp");
